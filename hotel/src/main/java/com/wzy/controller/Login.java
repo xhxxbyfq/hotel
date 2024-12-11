@@ -44,7 +44,14 @@ public class Login {
     private RoomSetService roomSetService;
 
     // 格式化日期的格式，统一采用这种格式来处理日期的显示和存储相关逻辑
-    private static final String DATE_FORMAT_PATTERN = "yyyy-MM-dd HH:mm:ss";
+    @Autowired
+    private UserServieAuto userServieAuto;
+
+    @RequestMapping("/tologin")
+    public String tologin() {
+
+        return "/login/login";
+    }
 
     /**
      * 处理用户访问登录页面的请求，直接返回登录页面的视图名称
@@ -58,9 +65,7 @@ public class Login {
         BeanUtils.copyProperties(loginlog, log);
         SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         log.setExittime(format.format(date));
-//        System.out.println(log.getExittime());
         loginLogService.updateLoginLogById(log);
-//        session.removeAttribute("login");
         session.invalidate();
 
         List<RoomSetPo> list = roomSetService.selectAll();
@@ -69,16 +74,13 @@ public class Login {
         mv.addObject("list", list);
         return mv;
     }
-
     /**
-     * 处理用户登录请求的逻辑
-     * 1. 根据传入的用户信息验证登录是否成功
-     * 2. 根据不同用户角色（如管理员和普通用户）跳转到不同的主页面
-     * 3. 计算不同分类的总费用，并添加到模型数据中传递给视图
-     * 4. 如果是首次登录，创建并保存登录日志信息
-     * @param user 包含用户登录信息的UserPo对象，例如用户名、密码等
-     * @param session 当前的HTTP会话对象，用于保存登录日志信息等操作
-     * @return 根据登录结果返回对应的视图（登录成功跳转到相应主页面，登录失败返回登录页面），并携带相关数据
+     * 处理用户退出登录的请求逻辑
+     * 1. 更新登录日志中的退出时间信息
+     * 2. 使当前会话失效，清除会话中的所有数据
+     * 3. 查询所有房间设置信息，并将其添加到模型数据中，重定向到首页
+     * @param session 当前的HTTP会话对象，用于获取登录日志信息以及使会话失效等操作
+     * @return 重定向到首页的ModelAndView对象，包含了房间设置信息列表
      */
     @RequestMapping("/tomain")
     public ModelAndView tomain(UserPo user, HttpSession session) {
