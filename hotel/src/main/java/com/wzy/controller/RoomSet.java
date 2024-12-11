@@ -33,79 +33,88 @@ public class RoomSet {
 
     @Autowired
     private RoomSetService roomSetService;
-	
-/*	@RequestMapping("/tolist")
-	public ModelAndView tolist(){
-		ModelAndView mv=null;
-		List<RoomSetPo> list=roomSetService.selectAll();
-		mv=new ModelAndView("/roomset/roomset");
-		mv.addObject("list",list);
-		return mv;
-	}*/
 
-    //分页和模糊查询
+    // 抽取参数校验方法，使代码复用且更清晰
+    private int validateCurrentPage(Integer currentPage) {
+        if (currentPage == null || currentPage == 0) {
+            return 1;
+        }
+        return currentPage;
+    }
+
+    private String validateTxtName(String txtname) {
+        return txtname == null? "" : txtname;
+    }
+
+    // 分页和模糊查询
     @RequestMapping("/tolist")
     public ModelAndView list(HttpServletRequest request, Integer currentPage, String txtname) {
-        ModelAndView mv = null;
-        mv = new ModelAndView("/roomset/roomset");
+        ModelAndView mv = new ModelAndView("/roomset/roomset");
+        currentPage = validateCurrentPage(currentPage);
+        txtname = validateTxtName(txtname);
+
         Page<RoomSetPo> vo = new Page<RoomSetPo>();
-        if (currentPage == null) {
-            currentPage = 1;
-        } else if (currentPage == 0) {
-            currentPage = 1;
-        }
-        if (txtname == null) {
-            txtname = "";
-        }
         vo.setCurrentPage(currentPage);
-        vo = this.roomSetService.pageFuzzyselect(txtname, vo);
-        List<AttributePo> listOne = attributeService.selectGuestRoomLevel();
+        try {
+            vo = this.roomSetService.pageFuzzyselect(txtname, vo);
+        } catch (Exception e) {
+            // 这里可以更详细地记录日志、返回错误信息给前端等，暂简单打印异常
+            e.printStackTrace();
+        }
+
+        List<AttributePo> listOne = getGuestRoomLevelList();
         mv.addObject("listOne", listOne);
         mv.addObject("list", vo);
         mv.addObject("txtname", txtname);
         return mv;
     }
 
+    private List<AttributePo> getGuestRoomLevelList() {
+        return attributeService.selectGuestRoomLevel();
+    }
 
     @RequestMapping("/toadd")
     public ModelAndView toadd() {
-        ModelAndView mv = null;
-        List<AttributePo> listOne = attributeService.selectGuestRoomLevel();
-        List<AttributePo> listTwo = attributeService.selectRoomState();
-        mv = new ModelAndView("/roomset/add");
-        mv.addObject("listOne", listOne);
-        mv.addObject("listTwo", listTwo);
+        ModelAndView mv = new ModelAndView("/roomset/add");
+        mv.addObject("listOne", getGuestRoomLevelList());
+        mv.addObject("listTwo", attributeService.selectRoomState());
         return mv;
     }
 
     @RequestMapping("/add")
     public ModelAndView add(RoomSetPo roomSetPo) {
-        ModelAndView mv = null;
-        roomSetService.insertAll(roomSetPo);
-        mv = new ModelAndView("redirect:/RoomSet/tolist.do");
-        return mv;
+        try {
+            roomSetService.insertAll(roomSetPo);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return new ModelAndView("redirect:/RoomSet/tolist.do");
     }
 
     @RequestMapping("/toupdate")
     public ModelAndView toupdate(int id) {
-        ModelAndView mv = null;
-        List<AttributePo> listOne = attributeService.selectGuestRoomLevel();
-        List<AttributePo> listTwo = attributeService.selectRoomState();
-        RoomSetPo listPo = roomSetService.selectById(id);
-        mv = new ModelAndView("/roomset/update");
-        mv.addObject("listOne", listOne);
-        mv.addObject("listTwo", listTwo);
-        mv.addObject("listPo", listPo);
+        ModelAndView mv = new ModelAndView("/roomset/update");
+        mv.addObject("listOne", getGuestRoomLevelList());
+        mv.addObject("listTwo", attributeService.selectRoomState());
+        try {
+            RoomSetPo listPo = roomSetService.selectById(id);
+            mv.addObject("listPo", listPo);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return mv;
     }
 
     @RequestMapping("/update")
     public ModelAndView update(RoomSetPo roomSetPo) {
-        ModelAndView mv = null;
-        roomSetService.updateById(roomSetPo);
-        mv = new ModelAndView("redirect:/RoomSet/tolist.do");
-        return mv;
+        try {
+            roomSetService.updateById(roomSetPo);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return new ModelAndView("redirect:/RoomSet/tolist.do");
     }
+
 
     @RequestMapping("/delete")
     public ModelAndView delete(String id) {
@@ -120,11 +129,12 @@ public class RoomSet {
 
     @RequestMapping("/addGuestRoomLevel")
     public ModelAndView addGuestRoomLevel(String txtname) {
-        attributeService.insertAll(2, txtname);
-        ModelAndView mv = null;
-        mv = new ModelAndView("redirect:/RoomSet/tolist.do");
-        return mv;
-
+        try {
+            attributeService.insertAll(2, txtname);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return new ModelAndView("redirect:/RoomSet/tolist.do");
     }
 
     @RequestMapping("/deleteGuestRoomLevel")
@@ -142,10 +152,15 @@ public class RoomSet {
     @ResponseBody
     @RequestMapping(value = "/YZ")
     public Object YZ(String roomNumber) {
-        int YorN = roomSetService.selectYZ(roomNumber);
+        int YorN;
+        try {
+            YorN = roomSetService.selectYZ(roomNumber);
+        } catch (Exception e) {
+            e.printStackTrace();
+            // 可以考虑根据异常情况返回合适的默认值或者错误提示信息给前端，这里暂返回0作为示意
+            YorN = 0;
+        }
         Gson gson = new Gson();
         return gson.toJson(YorN);
     }
-
-
 }
